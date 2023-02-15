@@ -1,4 +1,4 @@
-module github.com/tmc/grpc-websocket-proxy
+module github.com/proxima-one/grpc-websocket-proxy-go
 
 go 1.19
 
