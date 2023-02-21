@@ -320,7 +320,7 @@ func (p *Proxy) proxy(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		p.logger.Debugln("[write] scanned", scanner.Text())
-		var dataToWrite []byte
+		dataToWrite := make([]byte, len(scanner.Bytes()))
 		copy(dataToWrite, scanner.Bytes())
 		dataWriteChan <- dataToWrite
 	}
