@@ -2,7 +2,6 @@ package wsproxy
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -118,8 +117,8 @@ var defaultHeadersToForward = map[string]bool{
 	"origin":  true,
 	"Referer": true,
 	"referer": true,
-	"Cookie": true,
-	"cookie": true,
+	"Cookie":  true,
+	"cookie":  true,
 }
 
 func defaultHeaderForwarder(header string) bool {
@@ -168,14 +167,6 @@ func isClosedConnError(err error) bool {
 		return true
 	}
 	return websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway)
-}
-
-// dropCR drops a terminal \r from the data.
-func dropCR(data []byte) []byte {
-	if len(data) > 0 && data[len(data)-1] == '\r' {
-		return data[0 : len(data)-1]
-	}
-	return data
 }
 
 func (p *Proxy) proxy(w http.ResponseWriter, r *http.Request) {
@@ -312,17 +303,6 @@ func (p *Proxy) proxy(w http.ResponseWriter, r *http.Request) {
 
 	// write loop -- take messages from response and write to websocket
 	scanner := bufio.NewScanner(responseBodyR)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-		if i := bytes.IndexByte(data, '\n'); i >= 0 {
-			// We have a full newline-terminated line.
-			return i + 1, dropCR(data[0:i]), nil
-		}
-		// Request more data.
-		return 0, nil, nil
-	})
 
 	// if maxRespBodyBufferSize has been specified, use custom buffer for scanner
 	var scannerBuf []byte
@@ -340,7 +320,9 @@ func (p *Proxy) proxy(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		p.logger.Debugln("[write] scanned", scanner.Text())
-		dataWriteChan <- scanner.Bytes()
+		var dataToWrite []byte
+		copy(dataToWrite, scanner.Bytes())
+		dataWriteChan <- dataToWrite
 	}
 	if err := scanner.Err(); err != nil {
 		p.logger.Warnln("scanner err:", err)
